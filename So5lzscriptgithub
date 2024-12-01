@@ -1,0 +1,190 @@
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = game:GetService("Workspace").CurrentCamera
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local updateFrame = Instance.new("Frame", screenGui)
+local closeButton = Instance.new("TextButton", updateFrame)
+local updateText = Instance.new("TextLabel", updateFrame)
+local uiGradient = Instance.new("UIGradient", updateFrame)
+local closeSound = Instance.new("Sound", updateFrame)
+
+updateFrame.Size = UDim2.new(0, 350, 0, 250)
+updateFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+updateFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+updateFrame.BorderSizePixel = 0
+updateFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+updateFrame.BackgroundTransparency = 0.5
+
+uiGradient.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 0, 255))
+uiGradient.Rotation = 45
+
+closeButton.Size = UDim2.new(0, 40, 0, 40)
+closeButton.Position = UDim2.new(1, -45, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextSize = 30
+closeButton.BorderSizePixel = 0
+closeButton.TextStrokeTransparency = 0.8
+
+updateText.Size = UDim2.new(1, -40, 1, -40)
+updateText.Position = UDim2.new(0, 20, 0, 20)
+updateText.Text = [[
+hello there user of So5lz Killbot
+this was made very fast and easily tbh 
+i hope u enjoy it ig
+oh yeah and dont forget to join the discord server 
+for more future better updates
+thank you for using this PRESS AT A PLAYER TO SELECT AND PRESS Y TO ACTIVE  
+]]
+updateText.TextColor3 = Color3.fromRGB(255, 255, 255)
+updateText.TextWrapped = true
+updateText.TextSize = 20
+updateText.TextYAlignment = Enum.TextYAlignment.Top
+updateText.Font = Enum.Font.Gotham
+
+closeSound.SoundId = "rbxassetid://6698737249"
+closeSound.Looped = false
+closeSound.Volume = 1
+
+local tweenInfo = TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+local colorTween = TweenService:Create(updateFrame, tweenInfo, {BackgroundColor3 = Color3.fromRGB(0, 0, 255)})
+colorTween:Play()
+
+local gradientTween = TweenService:Create(uiGradient, tweenInfo, {Rotation = 45})
+gradientTween:Play()
+
+closeButton.MouseButton1Click:Connect(function()
+    closeSound:Play()
+    local closeTween = TweenService:Create(updateFrame, TweenInfo.new(0.5), {Size = UDim2.new(0, 0, 0, 0)})
+    closeTween:Play()
+    closeTween.Completed:Connect(function()
+        screenGui:Destroy()
+    end)
+end)
+
+closeButton.MouseEnter:Connect(function()
+    local hoverTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(200, 200, 200)})
+    hoverTween:Play()
+end)
+
+closeButton.MouseLeave:Connect(function()
+    local hoverTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
+    hoverTween:Play()
+end)
+
+local lockEnabled = false
+local targetPlayer = nil
+local offset = Vector3.new(0, 5, -10)
+local movementSpeed = 2
+local pathIndex = 1
+local radius = 10
+local verticalSpeed = 2
+local verticalOffset = 3
+local randomVariation = 0.5
+local prevPosition = nil
+local smoothTransitionTime = 3
+local teleportSpeed = 2
+
+local pathPoints = {}
+local numPoints = 12
+
+for i = 1, numPoints do
+    local angle = math.rad(i * (360 / numPoints))
+    local xOffset = math.cos(angle) * radius
+    local zOffset = math.sin(angle) * radius
+    table.insert(pathPoints, Vector3.new(xOffset, verticalOffset, zOffset))
+end
+
+local function findClosestPlayer()
+    local closestDistance = math.huge
+    local closestPlayer = nil
+    for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local screenPosition, onScreen = Camera:WorldToScreenPoint(otherPlayer.Character.HumanoidRootPart.Position)
+            local distance = (Vector2.new(screenPosition.X, screenPosition.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
+            if distance < closestDistance then
+                closestDistance = distance
+                closestPlayer = otherPlayer
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function toggleCameraLock()
+    if lockEnabled then
+        Camera.CameraType = Enum.CameraType.Custom
+        lockEnabled = false
+    else
+        Camera.CameraType = Enum.CameraType.Scriptable
+        lockEnabled = true
+    end
+end
+
+local function teleportPlayerBack()
+    if prevPosition then
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(prevPosition)
+    end
+end
+
+local function updateCamera()
+    if lockEnabled and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local targetHumanoidRootPart = targetPlayer.Character.HumanoidRootPart
+        local currentPoint = pathPoints[pathIndex] + Vector3.new(math.random(-randomVariation, randomVariation), 0, math.random(-randomVariation, randomVariation))
+        local yOffset = math.sin(math.rad(pathIndex * verticalSpeed)) * verticalOffset
+        local cameraPosition = targetHumanoidRootPart.Position + currentPoint + Vector3.new(0, yOffset, 0)
+        Camera.CFrame = CFrame.new(cameraPosition, targetHumanoidRootPart.Position)
+    end
+end
+
+local function updatePlayerPosition()
+    if lockEnabled and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local targetHumanoidRootPart = targetPlayer.Character.HumanoidRootPart
+        local currentPoint = pathPoints[pathIndex] + Vector3.new(math.random(-randomVariation, randomVariation), 0, math.random(-randomVariation, randomVariation))
+        local yOffset = math.sin(math.rad(pathIndex * verticalSpeed)) * verticalOffset
+        local newPosition = targetHumanoidRootPart.Position + currentPoint + Vector3.new(0, yOffset, 0)
+        local humanoidRootPart = player.Character.HumanoidRootPart
+        local currentPosition = humanoidRootPart.Position
+        local moveDirection = (newPosition - currentPosition).Unit
+        local moveDistance = (newPosition - currentPosition).Magnitude
+        local newPosition = currentPosition + moveDirection * math.min(movementSpeed, moveDistance)
+        humanoidRootPart.CFrame = CFrame.new(newPosition)
+    end
+end
+
+local function onKeyPress(input)
+    if input.KeyCode == Enum.KeyCode.Y then
+        if prevPosition == nil then
+            prevPosition = player.Character.HumanoidRootPart.Position
+        end
+        targetPlayer = findClosestPlayer()
+        if targetPlayer then
+            toggleCameraLock()
+            teleportPlayerBack()
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if lockEnabled and targetPlayer then
+        updateCamera()
+        updatePlayerPosition()
+        pathIndex = pathIndex + 1
+        if pathIndex > #pathPoints then
+            pathIndex = 1
+        end
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed then
+        onKeyPress(input)
+    end
+end)
